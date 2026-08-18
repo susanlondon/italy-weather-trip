@@ -1,9 +1,9 @@
 <!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#1f6045"><link rel="manifest" href="./manifest.webmanifest"><title>Italy Trip</title>
 <script>
 fetch("https://raw.githubusercontent.com/susanlondon/italy-weather-trip/e1a4ce6d3616110503cb712c1ff83cb9c2325737/index.html").then(r=>r.text()).then(t=>{
- t=t.replace("</head>","<link rel=\"stylesheet\" href=\"./mobile.css\"><link rel=\"stylesheet\" href=\"./mobile-compact.css\"></head>");
+ t=t.replace("</head>","<link rel=\"stylesheet\" href=\"./mobile.css\"><link rel=\"stylesheet\" href=\"./mobile-compact.css\"><link rel=\"stylesheet\" href=\"./weather-visual.css\"></head>");
  t=t.replace("<body>","<body><div id=\"mobileRoot\"></div>");
- t=t.replace("</body>","<script src=\"./weather-first.js\"><"+"/script><script src=\"./mobile-runtime-v2.js\"><"+"/script></body>");
+ t=t.replace("</body>","<script src=\"./weather-first.js\"><"+"/script><script src=\"./mobile-runtime-v2.js\"><"+"/script><script src=\"./weather-visual.js\"><"+"/script></body>");
  document.open();document.write(t);document.close();
 }).catch(()=>{document.body.innerHTML="<p style='font-family:sans-serif;padding:24px'>Mobile Dashboard 加载失败，请刷新页面。</p>";});
 </script>
