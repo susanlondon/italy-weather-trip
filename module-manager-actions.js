@@ -2,12 +2,30 @@
   let undoState=null;
   let undoTimer=null;
 
+  function injectStyles(){
+    if(document.querySelector('#moduleManagerActionStyles'))return;
+    const style=document.createElement('style');
+    style.id='moduleManagerActionStyles';
+    style.textContent=`
+      #moduleManagerList .module-manager-item{align-items:flex-start;gap:12px}
+      #moduleManagerList .module-manager-item>div:first-child{flex:1;min-width:0;padding-right:2px}
+      #moduleManagerList .module-manager-item-name{line-height:1.3}
+      #moduleManagerList .module-manager-item-sub{margin-top:4px;line-height:1.4;white-space:normal;overflow-wrap:anywhere;word-break:break-word;max-width:285px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+      #moduleManagerList .module-actions{display:flex;align-items:flex-start;gap:7px;flex:0 0 auto;margin-left:auto}
+      #moduleManagerList .module-action-btn{min-height:40px;border-radius:12px;font-size:12px;line-height:1.05}
+      #moduleManagerList .module-action-btn[data-mm-edit]{width:44px;min-width:44px;padding:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px}
+      #moduleManagerList .module-action-btn[data-mm-delete]{width:48px;min-width:48px;padding:0;display:flex;align-items:center;justify-content:center}
+      @media(max-width:560px){#moduleManagerList .module-manager-item-sub{max-width:210px}#moduleManagerList .module-actions{gap:6px}}
+    `;
+    document.head.appendChild(style);
+  }
+
   function snapshot(){
     return {
-      places: JSON.parse(JSON.stringify(places||[])),
-      modules: JSON.parse(JSON.stringify(savedModules||[])),
-      favorites: [...(favorites||[])],
-      selectedModule: selectedModule||null
+      places:JSON.parse(JSON.stringify(places||[])),
+      modules:JSON.parse(JSON.stringify(savedModules||[])),
+      favorites:[...(favorites||[])],
+      selectedModule:selectedModule||null
     };
   }
 
@@ -22,7 +40,7 @@
     localStorage.setItem('italyTripFavorites',JSON.stringify([...favorites]));
     if(typeof renderTable==='function')renderTable();
     if(typeof renderModules==='function')renderModules();
-    if(typeof renderModuleManager==='function' && document.querySelector('#moduleManagerModal')?.classList.contains('show'))renderModuleManager();
+    if(typeof renderModuleManager==='function'&&document.querySelector('#moduleManagerModal')?.classList.contains('show'))renderModuleManager();
     if(typeof updateSummary==='function')updateSummary();
     if(typeof updateModuleOptions==='function')updateModuleOptions();
   }
@@ -38,104 +56,57 @@
       document.body.appendChild(bar);
     }
     bar.innerHTML='';
-    const text=document.createElement('span');
-    text.textContent=message;
-    const btn=document.createElement('button');
-    btn.textContent='撤销';
+    const text=document.createElement('span');text.textContent=message;
+    const btn=document.createElement('button');btn.textContent='撤销';
     btn.style.cssText='min-height:30px;border:0;border-radius:9px;padding:0 10px;background:#fff;color:#17221d;font-weight:800;cursor:pointer';
-    btn.onclick=()=>{
-      restore(undoState);
-      undoState=null;
-      bar.remove();
-      clearTimeout(undoTimer);
-    };
+    btn.onclick=()=>{restore(undoState);undoState=null;bar.remove();clearTimeout(undoTimer)};
     bar.append(text,btn);
-    undoTimer=setTimeout(()=>{undoState=null;bar?.remove();},8000);
+    undoTimer=setTimeout(()=>{undoState=null;bar?.remove()},8000);
   }
 
   window.deletePlace=function(id){
-    const p=places.find(x=>x.id===id);
-    if(!p)return;
+    const p=places.find(x=>x.id===id);if(!p)return;
     if(!confirm(`确定删除「${p.name}」吗？`))return;
     const before=snapshot();
-    places=places.filter(x=>x.id!==id);
-    favorites.delete(id);
-    delete weatherCache[id];
-    savePlaces();
-    localStorage.setItem('italyTripFavorites',JSON.stringify([...favorites]));
-    renderTable();
-    renderModules();
-    updateSummary();
-    showUndo(`已删除地点「${p.name}」`,before);
+    places=places.filter(x=>x.id!==id);favorites.delete(id);delete weatherCache[id];
+    savePlaces();localStorage.setItem('italyTripFavorites',JSON.stringify([...favorites]));
+    renderTable();renderModules();updateSummary();showUndo(`已删除地点「${p.name}」`,before);
   };
 
   window.removeModule=function(name){
     if(!name)return;
     const count=places.filter(p=>(p.module||'未分类')===name).length;
-    const msg=count
-      ? `确定删除模块「${name}」吗？\n\n其中 ${count} 个目的地会保留，并暂时标记为“未分类”。之后可手动加入其他模块。`
-      : `确定删除空模块「${name}」吗？`;
+    const msg=count?`确定删除模块「${name}」吗？\n\n其中 ${count} 个目的地会保留，并暂时标记为“未分类”。之后可手动加入其他模块。`:`确定删除空模块「${name}」吗？`;
     if(!confirm(msg))return;
     const before=snapshot();
     places.forEach(p=>{if((p.module||'未分类')===name)p.module='未分类'});
     savedModules=savedModules.filter(m=>m!==name);
-    savePlaces();
-    saveModules();
+    savePlaces();saveModules();
     if(selectedModule===name){selectedModule=null;currentView='modules'}
     if(typeof closeModuleEditor==='function')closeModuleEditor();
-    renderModuleManager();
-    renderModules();
-    renderTable();
-    updateSummary();
-    updateModuleOptions();
+    renderModuleManager();renderModules();renderTable();updateSummary();updateModuleOptions();
     showUndo(`已删除模块「${name}」`,before);
   };
 
   function enhanceModuleManager(){
-    const list=document.querySelector('#moduleManagerList');
-    if(!list)return;
+    injectStyles();
+    const list=document.querySelector('#moduleManagerList');if(!list)return;
     list.querySelectorAll('.module-manager-item').forEach(item=>{
-      const edit=item.querySelector('[data-mm-edit]');
-      if(!edit)return;
-      const name=decodeURIComponent(edit.dataset.mmEdit||'');
-      if(!name)return;
+      const edit=item.querySelector('[data-mm-edit]');if(!edit)return;
+      const name=decodeURIComponent(edit.dataset.mmEdit||'');if(!name)return;
       let actions=item.querySelector('.module-actions');
-      if(!actions){
-        actions=document.createElement('div');
-        actions.className='module-actions';
-        edit.parentNode.insertBefore(actions,edit);
-        actions.appendChild(edit);
-      }
-      if(!actions.querySelector('[data-mm-delete]')){
-        const del=document.createElement('button');
-        del.className='ghost danger module-action-btn';
-        del.textContent='删除';
-        del.dataset.mmDelete=encodeURIComponent(name);
-        del.onclick=e=>{e.stopPropagation();removeModule(name)};
-        actions.appendChild(del);
-      }
+      if(!actions){actions=document.createElement('div');actions.className='module-actions';edit.parentNode.insertBefore(actions,edit);actions.appendChild(edit)}
+      edit.classList.add('module-action-btn');
+      edit.innerHTML='<span>编</span><span>辑</span>';
+      let del=actions.querySelector('[data-mm-delete]');
+      if(!del){del=document.createElement('button');del.className='ghost danger module-action-btn';del.textContent='删除';del.dataset.mmDelete=encodeURIComponent(name);del.onclick=e=>{e.stopPropagation();removeModule(name)};actions.appendChild(del)}
     });
   }
 
   const originalOpenModuleEditor=window.openModuleEditor;
-  if(typeof originalOpenModuleEditor==='function'){
-    window.openModuleEditor=function(name){
-      originalOpenModuleEditor.apply(this,arguments);
-      const del=document.querySelector('#deleteModuleBtn');
-      if(del)del.style.visibility='visible';
-    };
-  }
-
+  if(typeof originalOpenModuleEditor==='function')window.openModuleEditor=function(name){originalOpenModuleEditor.apply(this,arguments);const del=document.querySelector('#deleteModuleBtn');if(del)del.style.visibility='visible'};
   const originalRenderModuleManager=window.renderModuleManager;
-  if(typeof originalRenderModuleManager==='function'){
-    window.renderModuleManager=function(){
-      originalRenderModuleManager.apply(this,arguments);
-      enhanceModuleManager();
-    };
-  }
-
-  document.addEventListener('click',e=>{
-    if(e.target.closest('#manageModulesBtn'))setTimeout(enhanceModuleManager,0);
-  });
+  if(typeof originalRenderModuleManager==='function')window.renderModuleManager=function(){originalRenderModuleManager.apply(this,arguments);enhanceModuleManager()};
+  document.addEventListener('click',e=>{if(e.target.closest('#manageModulesBtn'))setTimeout(enhanceModuleManager,0)});
   setTimeout(enhanceModuleManager,0);
 })();
