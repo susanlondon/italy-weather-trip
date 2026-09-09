@@ -4,10 +4,10 @@
 
   function snapshot(){
     return {
-      places: JSON.parse(JSON.stringify(window.places||[])),
-      modules: JSON.parse(JSON.stringify(window.savedModules||[])),
-      favorites: [...(window.favorites||[])],
-      selectedModule: window.selectedModule||null
+      places: JSON.parse(JSON.stringify(places||[])),
+      modules: JSON.parse(JSON.stringify(savedModules||[])),
+      favorites: [...(favorites||[])],
+      selectedModule: selectedModule||null
     };
   }
 
@@ -53,7 +53,6 @@
     undoTimer=setTimeout(()=>{undoState=null;bar?.remove();},8000);
   }
 
-  // Override place deletion so accidental deletion can be undone.
   window.deletePlace=function(id){
     const p=places.find(x=>x.id===id);
     if(!p)return;
@@ -70,7 +69,6 @@
     showUndo(`已删除地点「${p.name}」`,before);
   };
 
-  // Modules are fully user-managed. “未分类” is no longer protected.
   window.removeModule=function(name){
     if(!name)return;
     const count=places.filter(p=>(p.module||'未分类')===name).length;
@@ -119,7 +117,6 @@
     });
   }
 
-  // Make the delete button visible even when editing “未分类”.
   const originalOpenModuleEditor=window.openModuleEditor;
   if(typeof originalOpenModuleEditor==='function'){
     window.openModuleEditor=function(name){
