@@ -11,7 +11,7 @@ Promise.all([
   t=t.replace(/const \$=s=>document\.querySelector\(s\);let places=JSON\.parse\(localStorage\.getItem\('italyTripPlaces'\)\|\|'null'\)\|\|defaultPlaces;/,
     "const $=s=>document.querySelector(s);const storedDataVersion=localStorage.getItem('italyTripDataVersion');let storedPlaces=JSON.parse(localStorage.getItem('italyTripPlaces')||'null');let places;if(storedDataVersion!==GUIDE_DATA_VERSION){const customPlaces=(storedPlaces||[]).filter(p=>String(p.id||'').startsWith('p_'));places=[...defaultPlaces,...customPlaces];localStorage.setItem('italyTripPlaces',JSON.stringify(places));localStorage.setItem('italyTripDataVersion',GUIDE_DATA_VERSION);localStorage.removeItem('italyTripModules')}else{places=storedPlaces||defaultPlaces};");
   t=t.replace("</head>","<link rel=\"stylesheet\" href=\"./weather-legend.css\"><link rel=\"stylesheet\" href=\"./desktop-weather-colors.css\"></head>");
-  t=t.replace("</body>","<script src=\"./weather-first.js\"><"+"/script><script src=\"./weather-legend.js\"><"+"/script><script src=\"./desktop-weather-colors.js\"><"+"/script></body>");
+  t=t.replace("</body>","<script src=\"./weather-first.js\"><"+"/script><script src=\"./weather-legend.js\"><"+"/script><script src=\"./desktop-weather-colors.js\"><"+"/script><script src=\"./module-manager-actions.js?v=1\"><"+"/script></body>");
   document.open();document.write(t);document.close();
 }).catch(()=>{document.body.innerHTML="<p style='font-family:sans-serif;padding:24px'>Dashboard 加载失败，请刷新页面。</p>";});
 </script>
