@@ -3,13 +3,15 @@
 const BASE="https://raw.githubusercontent.com/susanlondon/italy-weather-trip/e1a4ce6d3616110503cb712c1ff83cb9c2325737/index.html";
 Promise.all([
   fetch(BASE).then(r=>{if(!r.ok)throw Error('base');return r.text()}),
-  fetch("./guide-data-v1.3.json?v=1.3").then(r=>{if(!r.ok)throw Error('data');return r.json()})
+  fetch("./guide-data-v1.3.json?v=1.3.1").then(r=>{if(!r.ok)throw Error('data');return r.json()})
 ]).then(([t,data])=>{
   const version=data.version||'1.3';
-  const defaults=JSON.stringify(data.weatherDestinations||[]);
+  const weatherDestinations=(data.weatherDestinations||[]).map(p=>p.id==='d055'?{...p,query:'Giardini-Naxos',latitude:37.82755,longitude:15.26713,sub:'天气点：Giardini-Naxos（使用坐标定位）'}:p);
+  const defaults=JSON.stringify(weatherDestinations);
   t=t.replace(/const defaultPlaces=\[[\s\S]*?\];/,`const GUIDE_DATA_VERSION='${version}';const defaultPlaces=${defaults};`);
   t=t.replace(/const \$=s=>document\.querySelector\(s\);let places=JSON\.parse\(localStorage\.getItem\('italyTripPlaces'\)\|\|'null'\)\|\|defaultPlaces;/,
-    "const $=s=>document.querySelector(s);const storedDataVersion=localStorage.getItem('italyTripDataVersion');let storedPlaces=JSON.parse(localStorage.getItem('italyTripPlaces')||'null');let places;if(storedDataVersion!==GUIDE_DATA_VERSION){const customPlaces=(storedPlaces||[]).filter(p=>String(p.id||'').startsWith('p_'));places=[...defaultPlaces,...customPlaces];localStorage.setItem('italyTripPlaces',JSON.stringify(places));localStorage.setItem('italyTripDataVersion',GUIDE_DATA_VERSION);localStorage.removeItem('italyTripModules')}else{places=storedPlaces||defaultPlaces};");
+    "const $=s=>document.querySelector(s);const storedDataVersion=localStorage.getItem('italyTripDataVersion');let storedPlaces=JSON.parse(localStorage.getItem('italyTripPlaces')||'null');let places;if(storedDataVersion!==GUIDE_DATA_VERSION){const customPlaces=(storedPlaces||[]).filter(p=>String(p.id||'').startsWith('p_'));places=[...defaultPlaces,...customPlaces];localStorage.setItem('italyTripPlaces',JSON.stringify(places));localStorage.setItem('italyTripDataVersion',GUIDE_DATA_VERSION);localStorage.removeItem('italyTripModules')}else{const defaultById=Object.fromEntries(defaultPlaces.map(p=>[p.id,p]));places=(storedPlaces||defaultPlaces).map(p=>defaultById[p.id]?{...defaultById[p.id],...p,latitude:p.latitude??defaultById[p.id].latitude,longitude:p.longitude??defaultById[p.id].longitude}:p);};");
+  t=t.replace("async function geocode(p){","async function geocode(p){if(p.latitude!=null&&p.longitude!=null)return{name:p.query||p.name,latitude:+p.latitude,longitude:+p.longitude,country_code:p.country||'IT'};");
   t=t.replace("</head>","<link rel=\"stylesheet\" href=\"./mobile.css\"><link rel=\"stylesheet\" href=\"./mobile-compact.css\"><link rel=\"stylesheet\" href=\"./weather-visual.css\"><link rel=\"stylesheet\" href=\"./mobile-5day.css\"><link rel=\"stylesheet\" href=\"./mobile-landscape.css\"></head>");
   t=t.replace("<body>","<body><div id=\"mobileRoot\"></div>");
   t=t.replace("</body>","<script src=\"./weather-first.js\"><"+"/script><script src=\"./mobile-runtime-v2.js\"><"+"/script><script src=\"./weather-visual.js\"><"+"/script><script src=\"./mobile-5day.js\"><"+"/script><script src=\"./mobile-landscape.js\"><"+"/script></body>");
