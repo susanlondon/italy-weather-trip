@@ -10,12 +10,12 @@
       #moduleManagerList .module-manager-item{align-items:flex-start;gap:12px}
       #moduleManagerList .module-manager-item>div:first-child{flex:1;min-width:0;padding-right:2px}
       #moduleManagerList .module-manager-item-name{line-height:1.3}
-      #moduleManagerList .module-manager-item-sub{margin-top:4px;line-height:1.4;white-space:normal;overflow-wrap:anywhere;word-break:break-word;max-width:285px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+      #moduleManagerList .module-manager-item-sub{margin-top:4px;line-height:1.4;white-space:normal;overflow-wrap:anywhere;word-break:break-word;max-width:275px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
       #moduleManagerList .module-actions{display:flex;align-items:flex-start;gap:7px;flex:0 0 auto;margin-left:auto}
-      #moduleManagerList .module-action-btn{min-height:40px;border-radius:12px;font-size:12px;line-height:1.05}
-      #moduleManagerList .module-action-btn[data-mm-edit]{width:44px;min-width:44px;padding:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px}
-      #moduleManagerList .module-action-btn[data-mm-delete]{width:48px;min-width:48px;padding:0;display:flex;align-items:center;justify-content:center}
-      @media(max-width:560px){#moduleManagerList .module-manager-item-sub{max-width:210px}#moduleManagerList .module-actions{gap:6px}}
+      #moduleManagerList .module-action-btn{width:48px;min-width:48px;height:40px;min-height:40px;padding:0;border-radius:12px;font-size:12px;line-height:1;display:flex;align-items:center;justify-content:center;white-space:nowrap;flex:0 0 48px}
+      #moduleManagerList .module-action-btn[data-mm-edit]{width:48px;min-width:48px;flex:0 0 48px;padding:0;display:flex;flex-direction:row;align-items:center;justify-content:center;gap:0}
+      #moduleManagerList .module-action-btn[data-mm-delete]{width:48px;min-width:48px;flex:0 0 48px;padding:0;display:flex;align-items:center;justify-content:center}
+      @media(max-width:560px){#moduleManagerList .module-manager-item-sub{max-width:200px}#moduleManagerList .module-actions{gap:6px}}
     `;
     document.head.appendChild(style);
   }
@@ -97,7 +97,7 @@
       let actions=item.querySelector('.module-actions');
       if(!actions){actions=document.createElement('div');actions.className='module-actions';edit.parentNode.insertBefore(actions,edit);actions.appendChild(edit)}
       edit.classList.add('module-action-btn');
-      edit.innerHTML='<span>编</span><span>辑</span>';
+      edit.textContent='编辑';
       let del=actions.querySelector('[data-mm-delete]');
       if(!del){del=document.createElement('button');del.className='ghost danger module-action-btn';del.textContent='删除';del.dataset.mmDelete=encodeURIComponent(name);del.onclick=e=>{e.stopPropagation();removeModule(name)};actions.appendChild(del)}
     });
