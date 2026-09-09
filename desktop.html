@@ -15,7 +15,7 @@ Promise.all([
   t=t.replaceAll("ensureModule('未分类');","");
   t=t.replace("updateSourceUI();updateLocationUI();updateSummary();setView('all');loadAll();","const __baseGeocode=geocode;geocode=async function(p){if(p&&p.latitude!=null&&p.longitude!=null)return{name:p.query||p.name,latitude:+p.latitude,longitude:+p.longitude,country_code:p.country||'IT'};return __baseGeocode(p)};const __gn=places.find(p=>p.id==='d055');if(__gn){Object.assign(__gn,{query:'Giardini-Naxos',country:'IT',latitude:37.82755,longitude:15.26713,sub:'天气点：Giardini-Naxos（固定坐标）'});savePlaces();}updateSourceUI();updateLocationUI();updateSummary();setView('all');loadAll();");
   t=t.replace("</head>","<link rel=\"stylesheet\" href=\"./weather-legend.css\"><link rel=\"stylesheet\" href=\"./desktop-weather-colors.css\"></head>");
-  t=t.replace("</body>","<script src=\"./weather-first.js\"><"+"/script><script src=\"./weather-legend.js\"><"+"/script><script src=\"./desktop-weather-colors.js\"><"+"/script><script src=\"./module-manager-actions.js?v=4\"><"+"/script></body>");
+  t=t.replace("</body>","<script src=\"./weather-first.js\"><"+"/script><script src=\"./weather-legend.js\"><"+"/script><script src=\"./desktop-weather-colors.js\"><"+"/script><script src=\"./module-manager-actions.js?v=5\"><"+"/script></body>");
   document.open();document.write(t);document.close();
 }).catch(()=>{document.body.innerHTML="<p style='font-family:sans-serif;padding:24px'>Dashboard 加载失败，请刷新页面。</p>";});
 </script>
