@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Italy Weather Map</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+:root{--bg:#f4f6f3;--card:#fff;--text:#17221d;--muted:#728078;--line:#e4e9e5;--accent:#1f6045;--shadow:0 10px 35px rgba(28,54,42,.10)}
+*{box-sizing:border-box}html,body{margin:0;height:100%;font-family:Inter,system-ui,-apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;color:var(--text);background:var(--bg)}
+.app{height:100%;display:flex;flex-direction:column}.top{background:#fff;border-bottom:1px solid var(--line);padding:12px 16px;z-index:1000;box-shadow:0 5px 20px rgba(28,54,42,.06)}
+.top-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.title{font-weight:900;font-size:20px;margin-right:auto}.sub{color:var(--muted);font-size:12px}
+button,select{font:inherit;border:1px solid var(--line);background:#fff;color:var(--text);border-radius:11px;min-height:38px;padding:0 11px;cursor:pointer;font-weight:700}.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+.days{display:flex;gap:6px;overflow-x:auto;padding-top:10px}.days button{min-width:72px;white-space:nowrap}.days button.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.main{position:relative;flex:1;min-height:0}#map{height:100%;width:100%}.status{position:absolute;left:50%;top:14px;transform:translateX(-50%);z-index:600;background:rgba(255,255,255,.95);border:1px solid var(--line);border-radius:999px;padding:8px 12px;font-size:12px;box-shadow:var(--shadow)}
+.legend{position:absolute;right:12px;bottom:20px;z-index:600;background:rgba(255,255,255,.95);border:1px solid var(--line);border-radius:14px;padding:9px 11px;font-size:11px;box-shadow:var(--shadow);line-height:1.8}.dot{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:5px}
+.wx-marker{transform:translate(-50%,-50%);min-width:64px;padding:5px 7px;border-radius:14px;border:1px solid rgba(0,0,0,.08);box-shadow:0 4px 12px rgba(0,0,0,.14);text-align:center;font-weight:850;background:#fff;white-space:nowrap}.wx-marker .icon{font-size:17px}.wx-marker .temp{font-size:12px;margin-left:3px}.wx-marker .name{font-size:9px;font-weight:800;max-width:92px;overflow:hidden;text-overflow:ellipsis}
+.wx-good{background:#dff3e5}.wx-okay{background:#fff1bf}.wx-meh{background:#ffe0c2}.wx-bad{background:#ffd4d4}.wx-loading{background:#eef1ef}
+.popup h3{margin:0 0 6px;font-size:15px}.popup .meta{font-size:12px;color:#53645b;line-height:1.6}.popup .score{font-size:18px;font-weight:900;margin-top:7px}.popup .trend{display:flex;gap:5px;margin-top:8px;flex-wrap:wrap}.trend span{background:#f2f5f3;border-radius:8px;padding:4px 6px;font-size:10px}
+@media(max-width:700px){.top{padding:10px}.title{font-size:17px;width:100%}.top-row{gap:6px}.sub{display:none}.legend{bottom:12px}.days{padding-top:8px}.days button{min-width:66px}}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="top">
+    <div class="top-row">
+      <button onclick="location.href='./desktop.html'">← Dashboard</button>
+      <div><div class="title">🗺 意大利全境天气</div><div class="sub">一眼查看各目的地天气，点击地图标记看详情。</div></div>
+      <select id="moduleFilter"><option value="all">全部模块</option></select>
+      <select id="placeFilter"><option value="all">全部目的地</option><option value="favorites">只看收藏</option></select>
+      <button class="primary" id="refreshBtn">↻ 刷新</button>
+    </div>
+    <div class="days" id="days"></div>
+  </div>
+  <div class="main">
+    <div id="map"></div>
+    <div class="status" id="status">正在载入天气地图…</div>
+    <div class="legend"><div><i class="dot" style="background:#dff3e5"></i>很适合</div><div><i class="dot" style="background:#fff1bf"></i>可以</div><div><i class="dot" style="background:#ffe0c2"></i>一般</div><div><i class="dot" style="background:#ffd4d4"></i>不建议</div></div>
+  </div>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const map=L.map('map',{zoomControl:true,minZoom:5}).setView([42.5,12.6],6);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18,attribution:'&copy; OpenStreetMap contributors'}).addTo(map);
+const statusEl=document.querySelector('#status'),daysEl=document.querySelector('#days'),moduleFilter=document.querySelector('#moduleFilter'),placeFilter=document.querySelector('#placeFilter');
+let places=[],weather={},markers=[],selectedDay=0,favorites=new Set(JSON.parse(localStorage.getItem('italyTripFavorites')||'[]'));
+const coordCache=JSON.parse(localStorage.getItem('italyMapCoords')||'{}');
+
+function iconFor(c){if(c===0)return'☀️';if([1,2].includes(c))return'🌤️';if(c===3)return'☁️';if([45,48].includes(c))return'🌫️';if([51,53,55,56,57].includes(c))return'🌦️';if([61,63,65,66,67,80,81,82].includes(c))return'🌧️';if([71,73,75,77,85,86].includes(c))return'🌨️';if([95,96,99].includes(c))return'⛈️';return'🌤️'}
+function scoreDay(c,r,p,t,s=3){let x=100;if([1,2].includes(c))x-=5;else if(c===3)x-=12;else if([45,48].includes(c))x-=18;else if([51,53,55,56,57].includes(c))x-=20;else if([61,63,65,66,67,80,81,82].includes(c))x-=35;else if([71,73,75,77,85,86].includes(c))x-=42;else if([95,96,99].includes(c))x-=55;x-=Math.min(30,(r||0)*.25);x-=Math.min(20,(p||0)*2);if(t<8||t>34)x-=12;return Math.max(0,Math.round(x*(.75+s*.1)))}
+function scoreClass(s){return s>=80?'wx-good':s>=64?'wx-okay':s>=48?'wx-meh':'wx-bad'}
+function fmtDate(s){const d=new Date(s+'T12:00:00');return (d.getMonth()+1)+'/'+d.getDate()+' '+['周日','周一','周二','周三','周四','周五','周六'][d.getDay()]}
+async function geocode(p){
+  if(p.latitude!=null&&p.longitude!=null)return{lat:+p.latitude,lon:+p.longitude};
+  if(coordCache[p.id])return coordCache[p.id];
+  const name=encodeURIComponent(p.query||p.name),country=p.country||'IT';
+  const r=await fetch('https://geocoding-api.open-meteo.com/v1/search?name='+name+'&count=8&language=en&format=json');
+  const j=await r.json();if(!j.results?.length)throw Error('找不到地点');
+  let x=j.results;const f=x.filter(v=>v.country_code===country);if(f.length)x=f;
+  const c={lat:x[0].latitude,lon:x[0].longitude};coordCache[p.id]=c;localStorage.setItem('italyMapCoords',JSON.stringify(coordCache));return c;
+}
+async function forecast(p,c){
+  const u='https://api.open-meteo.com/v1/forecast?latitude='+c.lat+'&longitude='+c.lon+'&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max&timezone=auto&forecast_days=7';
+  const r=await fetch(u);if(!r.ok)throw Error('天气加载失败');return await r.json();
+}
+async function pool(items,limit,fn){
+  let i=0;const out=[];async function worker(){while(i<items.length){const idx=i++;out[idx]=await fn(items[idx],idx)}}await Promise.all(Array.from({length:Math.min(limit,items.length)},worker));return out;
+}
+function activePlaces(){
+  const m=moduleFilter.value,f=placeFilter.value;
+  return places.filter(p=>(m==='all'||(p.module||'未分类')===m)&&(f==='all'||favorites.has(p.id)));
+}
+function clearMarkers(){markers.forEach(m=>map.removeLayer(m));markers=[]}
+function renderDays(){
+  const first=Object.values(weather).find(x=>x?.daily?.time?.length);
+  const dates=first?.daily?.time||[];
+  daysEl.innerHTML='';
+  dates.slice(0,7).forEach((d,i)=>{const b=document.createElement('button');b.textContent=(i===0?'今天 ':i===1?'明天 ':'')+fmtDate(d);b.className=i===selectedDay?'active':'';b.onclick=()=>{selectedDay=i;renderDays();renderMarkers()};daysEl.appendChild(b)});
+}
+function popupHtml(p,d,i,s){
+  const a=d.daily,trend=a.time.slice(0,3).map((dt,k)=>'<span>'+fmtDate(dt)+' '+iconFor(a.weather_code[k])+' '+Math.round(a.temperature_2m_max[k])+'°</span>').join('');
+  return '<div class="popup"><h3>'+p.name+'</h3><div class="meta">'+fmtDate(a.time[i])+' · '+iconFor(a.weather_code[i])+' '+Math.round(a.temperature_2m_max[i])+'° / '+Math.round(a.temperature_2m_min[i])+'°<br>降雨概率 '+(a.precipitation_probability_max[i]??0)+'% · '+Number(a.precipitation_sum[i]||0).toFixed(1)+' mm<br>'+(p.module||'未分类')+'</div><div class="score">推荐分 '+s+'/100</div><div class="trend">'+trend+'</div></div>';
+}
+function renderMarkers(){
+  clearMarkers();const list=activePlaces();const bounds=[];
+  list.forEach(p=>{const d=weather[p.id];if(!d?.daily||!d.coord||selectedDay>=d.daily.time.length)return;
+    const i=selectedDay,s=scoreDay(d.daily.weather_code[i],d.daily.precipitation_probability_max[i],d.daily.precipitation_sum[i],d.daily.temperature_2m_max[i],p.sensitivity||3);
+    const html='<div class="wx-marker '+scoreClass(s)+'"><span class="icon">'+iconFor(d.daily.weather_code[i])+'</span><span class="temp">'+Math.round(d.daily.temperature_2m_max[i])+'°</span><div class="name">'+(p.query||p.name)+'</div></div>';
+    const icon=L.divIcon({className:'',html,iconSize:[0,0]});
+    const m=L.marker([d.coord.lat,d.coord.lon],{icon}).addTo(map).bindPopup(popupHtml(p,d,i,s),{maxWidth:290});
+    markers.push(m);bounds.push([d.coord.lat,d.coord.lon]);
+  });
+  if(bounds.length>1)map.fitBounds(bounds,{padding:[50,50],maxZoom:7});else if(bounds.length===1)map.setView(bounds[0],9);
+}
+function buildFilters(){
+  const mods=[...new Set(places.map(p=>p.module||'未分类'))].sort((a,b)=>a.localeCompare(b,'zh'));
+  moduleFilter.innerHTML='<option value="all">全部模块</option>'+mods.map(m=>'<option value="'+m.replace(/"/g,'&quot;')+'">'+m+'</option>').join('');
+}
+async function load(){
+  statusEl.style.display='block';statusEl.textContent='正在载入目的地…';weather={};
+  const data=await fetch('./guide-data-v1.3.json?v=map1').then(r=>r.json());
+  const defaults=data.weatherDestinations||[];
+  const saved=JSON.parse(localStorage.getItem('italyTripPlaces')||'null');
+  places=saved?.length?saved:defaults;
+  const gn=places.find(p=>p.id==='d055');if(gn){gn.query='Giardini-Naxos';gn.latitude=37.82755;gn.longitude=15.26713}
+  buildFilters();
+  let done=0;
+  await pool(places,6,async p=>{try{const c=await geocode(p),d=await forecast(p,c);weather[p.id]={...d,coord:c}}catch(e){weather[p.id]={error:e.message}}finally{done++;statusEl.textContent='正在载入天气 '+done+'/'+places.length}});
+  renderDays();renderMarkers();
+  const failed=places.filter(p=>weather[p.id]?.error).length;
+  statusEl.textContent=failed?'已载入，'+failed+' 个地点暂时无法获取':'已载入 '+places.length+' 个目的地';
+  setTimeout(()=>statusEl.style.display='none',2800);
+}
+moduleFilter.onchange=renderMarkers;placeFilter.onchange=renderMarkers;document.querySelector('#refreshBtn').onclick=load;
+load().catch(e=>{statusEl.textContent='地图加载失败：'+e.message});
+</script>
+</body></html>
