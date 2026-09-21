@@ -24,7 +24,7 @@ button,select{font:inherit;border:1px solid var(--line);background:#fff;color:va
 <div class="app">
   <div class="top">
     <div class="top-row">
-      <button onclick="location.href='./desktop.html'">← Dashboard</button>
+      <button onclick="location.href=(new URLSearchParams(location.search).get('from')==='mobile'?'./mobile.html':'./desktop.html')">← Dashboard</button>
       <div><div class="title">🗺 意大利全境天气</div><div class="sub">一眼查看各目的地天气，点击地图标记看详情。</div></div>
       <select id="moduleFilter"><option value="all">全部模块</option></select>
       <select id="placeFilter"><option value="all">全部目的地</option><option value="favorites">只看收藏</option></select>
